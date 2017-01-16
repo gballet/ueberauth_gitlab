@@ -1,32 +1,47 @@
 defmodule UeberauthGitlab.Mixfile do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [app: :ueberauth_gitlab,
-     version: "0.1.0",
+     version: @version,
+     name: "Ueberauth Gitlab",
+     package: package(),
      elixir: "~> 1.3",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     source_url: "https://github.com/gballet/ueberauth_gitlab",
+     homepage_url: "https://github.com/gballet/ueberauth_gitlab",
+     description: description(),
+     deps: deps(),
+     docs: docs()]
   end
 
-  # Configuration for the OTP application
-  #
-  # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [applications: [:logger, :ueberauth, :oauth2]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [
+        {:oauth2, "~> 0.8.2"},
+        {:ueberauth, "~> 0.4"},
+        {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
+  end
+
+  defp docs do
+      [extras: ["README.md"]]
+  end
+
+  defp description do
+      "An Ueberauth strategy for gitlab"
+  end
+
+  defp package do
+      [files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      maintainers: ["Guillaume Ballet"],
+      license: ["Unlicense"],
+      links: %{"GitHub": "https://github.com/gballet/ueberauth_gitlab"}]
   end
 end
