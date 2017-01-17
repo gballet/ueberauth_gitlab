@@ -19,10 +19,10 @@ defmodule Ueberauth.Strategy.Gitlab.OAuth do
     end
 
     def get(token, url, headers \\ [], opts \\ []) do
-        [token: token]
-        |> client
+        client
         |> put_param("client_secret", client().client_secret)
-        |> OAuth2.Client.get(url, headers, opts) 
+        |> put_header("Authorization", "#{token.token_type} #{token.access_token}")
+        |> OAuth2.Client.get(url, headers, opts)
     end
 
     def get_token!(params \\ [], options \\ []) do
