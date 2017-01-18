@@ -3,6 +3,9 @@ defmodule Ueberauth.Strategy.Gitlab do
             default_scope: "read_user",
             oauth2_module: Ueberauth.Strategy.Gitlab.OAuth
 
+    @gitlab_api_version "v3"
+    @gitlab_user_endpoint "/api/#{@gitlab_api_version}/user"
+
     alias Ueberauth.Auth.Info
     alias Ueberauth.Auth.Credentials
     alias Ueberauth.Auth.Extra
@@ -83,7 +86,7 @@ defmodule Ueberauth.Strategy.Gitlab do
 
     defp fetch_user(conn, token) do
         conn = put_private(conn, :gitlab_token, token)
-        case Ueberauth.Strategy.Gitlab.OAuth.get(token, "/api/v3/user") do
+        case Ueberauth.Strategy.Gitlab.OAuth.get(token, @gitlab_user_endpoint) do
             {:ok, %OAuth2.Response{status_code: status_code_user, body: user}} when status_code_user in 200..399 ->
                 put_private(conn, :gitlab_user, user)
             {:ok, %OAuth2.Response{status_code: 401, body: body}} ->
