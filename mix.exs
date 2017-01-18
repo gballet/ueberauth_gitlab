@@ -41,7 +41,7 @@ defmodule UeberauthGitlab.Mixfile do
   defp package do
       [files: ["lib", "mix.exs", "README.md", "LICENSE"],
       maintainers: ["Guillaume Ballet"],
-      license: ["Unlicense"],
+      licenses: ["Unlicense"],
       links: %{"GitHub": "https://github.com/gballet/ueberauth_gitlab"}]
   end
 end
