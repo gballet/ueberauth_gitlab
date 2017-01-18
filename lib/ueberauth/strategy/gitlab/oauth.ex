@@ -1,4 +1,12 @@
 defmodule Ueberauth.Strategy.Gitlab.OAuth do
+    @moduledoc """
+    An implementation of OAuth2 for gitlab.
+
+    To add your `client_id` and `client_secret` include these values in your configuration.
+        config :ueberauth, Ueberauth.Strategy.Gitlab.OAuth,
+        client_id: System.get_env("GITLAB_CLIENT_ID"),
+        client_secret: System.get_env("GITLAB_CLIENT_SECRET")
+    """
     use OAuth2.Strategy
 
     @defaults [
@@ -8,6 +16,19 @@ defmodule Ueberauth.Strategy.Gitlab.OAuth do
         token_url: "https://gitlab.com/oauth/token"
     ]
 
+    @doc """
+    Construct a client for requests to Gitlab.
+    
+    Optionally include any OAuth2 options here to be merged with the defaults. For instance,
+    if you wish to use your own Gitlab server:
+    
+        Ueberauth.Strategy.Gitlab.OAuth.client(site: "https://gitlab.example.com/",
+                        authorize_url: "https://gitlab.example.com/oauth/authorize",
+                        token_url: "https://gitlab.example.com/oauth/token")
+        
+    This will be setup automatically for you in `Ueberauth.Strategy.Gitlab`.
+    These options are only useful for usage outside the normal callback phase of Ueberauth.
+    """
     def client(opts \\ []) do
         config = Application.get_env(:ueberauth, Ueberauth.Strategy.Gitlab.OAuth)
         client_ops = @defaults |> Keyword.merge(config) |> Keyword.merge(opts)

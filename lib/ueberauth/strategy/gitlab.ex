@@ -1,4 +1,47 @@
 defmodule Ueberauth.Strategy.Gitlab do
+    @moduledoc """
+    Provides an Ueberauth strategy for Gitlab. This is based on the GitHub
+    strategy.
+    
+    ## Configuration
+    
+    Create a [Gitlab application](https://gitlab.com/profile/applications), and
+    write down its `client_id` and `client_secret` values.
+    
+    Include the Gitlab provider in your Ueberauth configuration:
+    
+        config :ueberauth, Ueberauth,
+            providers: [
+                ...
+                gitlab: { Ueberauth.Strategy.Gitlab, [] }
+            ]
+    
+    The configure the Gitlab strategy:
+    
+        config :ueberauth, Ueberauth.Strategy.Gitlab.OAuth,
+            client_id:  System.get_env("GITLAB_CLIENT_ID"),
+            client_secret:  System.get_env("GITLAB_CLIENT_SECRET")
+    
+    You can edit the behaviour of the Strategy by including some options when you register your provider.
+    To set the `uid_field`
+
+        config :ueberauth, Ueberauth,
+            providers: [
+                ...
+                gitlab: { Ueberauth.Strategy.Gitlab, [uid_field: :email] }
+            ]
+
+    Default is `:username`.
+    
+    To set the default 'scopes' (permissions):
+
+      config :ueberauth, Ueberauth,
+        providers: [
+          gitlab: { Ueberauth.Strategy.Gitlab, [default_scope: "read_user,api"] }
+        ]
+
+    Default is "read_user"
+    """
     use Ueberauth.Strategy, uid_field: :username,
             default_scope: "read_user",
             oauth2_module: Ueberauth.Strategy.Gitlab.OAuth
@@ -10,6 +53,15 @@ defmodule Ueberauth.Strategy.Gitlab do
     alias Ueberauth.Auth.Credentials
     alias Ueberauth.Auth.Extra
 
+    @doc """
+    Handles the initial redirect to the gitlab authentication page.
+
+    To customize the scope (permissions) that are requested by gitlab include them as part of your url:
+
+        "/auth/gitlab?scope=read_user,api"
+
+    You can also include a `state` param that gitlab will return to you.
+    """
     def handle_request!(conn) do
         scopes = conn.params["scope"] || option(conn, :default_scope)
         opts = [redirect_uri: callback_url(conn), scope: scopes]
@@ -18,6 +70,10 @@ defmodule Ueberauth.Strategy.Gitlab do
         redirect!(conn, apply(module, :authorize_url!, [opts]))
     end
 
+    @doc """
+    Handles the callback from Gitlab. When there is a failure from Gitlab the failure is included in the
+    `ueberauth_failure` struct. Otherwise the information returned from Gitlab is returned in the `Ueberauth.Auth` struct.
+    """
     def handle_callback!(%Plug.Conn{params: %{"code" => code}} = conn) do
         module = option(conn, :oauth2_module)
         token = apply(module, :get_token!, [[code: code, redirect_uri: callback_url(conn)]])
@@ -29,21 +85,34 @@ defmodule Ueberauth.Strategy.Gitlab do
         end
     end
 
+    @doc """
+    Called when no code is received from Gitlab.
+    """
     def handle_callback!(conn) do
         set_errors!(conn, [error("missing_code", "No code received")])
     end
 
+    @doc """
+    Cleans up the private area of the connection used for passing the raw Gitlab response around during the callback.
+    """
     def handle_cleanup!(conn) do
         conn
         |> put_private(:gitlab_user, nil)
         |> put_private(:gitlab_token, nil)
     end
 
+    @doc """
+    Fetches the uid field from the Gitlab response. This defaults to the option `uid_field` which in-turn
+    defaults to `username`
+    """
     def uid(conn) do
         user = conn |> option(:uid_field) |> to_string
         conn.private.gitlab_user[user]
     end
 
+    @doc """
+    Includes the credentials from the Gitlab response.
+    """
     def credentials(conn) do
         token = conn.private.gitlab_token
         scope_string = (token.other_params["scope"] || "")
@@ -59,6 +128,9 @@ defmodule Ueberauth.Strategy.Gitlab do
         }
     end
 
+    @doc """
+    Fetches the fields to populate the info section of the `Ueberauth.Auth` struct.
+    """
     def info(conn) do
         user = conn.private.gitlab_user
 
@@ -75,6 +147,9 @@ defmodule Ueberauth.Strategy.Gitlab do
         }
     end
 
+    @doc """
+    Stores the raw information (including the token) obtained from the Gitlab callback.
+    """
     def extra(conn) do
         %Extra {
             raw_info: %{
@@ -86,6 +161,8 @@ defmodule Ueberauth.Strategy.Gitlab do
 
     defp fetch_user(conn, token) do
         conn = put_private(conn, :gitlab_token, token)
+        # Unlike github, gitlab returns the email in the main call, so a simple `case`
+        # statement works very well here.
         case Ueberauth.Strategy.Gitlab.OAuth.get(token, @gitlab_user_endpoint) do
             {:ok, %OAuth2.Response{status_code: status_code_user, body: user}} when status_code_user in 200..399 ->
                 put_private(conn, :gitlab_user, user)
