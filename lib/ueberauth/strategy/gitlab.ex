@@ -65,7 +65,9 @@ defmodule Ueberauth.Strategy.Gitlab do
     def handle_request!(conn) do
         scopes = conn.params["scope"] || option(conn, :default_scope)
         opts = [redirect_uri: callback_url(conn), scope: scopes]
-        # TODO add state
+
+        opts = if conn.params["state"], do: Keyword.put(opts, :state, conn.params["state"]), else: opts
+
         module = option(conn, :oauth2_module)
         redirect!(conn, apply(module, :authorize_url!, [opts]))
     end
@@ -171,7 +173,7 @@ defmodule Ueberauth.Strategy.Gitlab do
             {:error, %OAuth2.Error{reason: reason}} ->
                 set_errors!(conn, [error("OAuth2", reason)])
             _ ->
-                set_errors!(conn, [error("OAuth2", "An error occured")])
+                set_errors!(conn, [error("OAuth2", "An undefined error occured")])
         end
     end
     
